@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="apps/sim/public/static/sim.png" alt="247 Workforce Logo" width="500"/>
+  <img src="apps/sim/public/static/pulse.png" alt="247 Workforce Logo" width="500"/>
 </p>
 
 <p align="center">

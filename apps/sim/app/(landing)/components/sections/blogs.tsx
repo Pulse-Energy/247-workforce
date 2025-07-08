@@ -50,7 +50,7 @@ function Blogs() {
             date={new Date('25 April 2025')}
             author='Emir Ayaz'
             authorRole='Designer'
-            avatar='/static/sim.png'
+            avatar='/static/pulse.png'
             type='Agents'
             readTime='6'
           />
@@ -61,7 +61,7 @@ function Blogs() {
             date={new Date('25 April 2025')}
             author='Emir Ayaz'
             authorRole='Designer'
-            avatar='/static/sim.png'
+            avatar='/static/pulse.png'
             type='Agents'
             readTime='6'
           />
@@ -80,7 +80,7 @@ function Blogs() {
             date={new Date('25 April 2025')}
             author='Emir Ayaz'
             authorRole='Designer'
-            avatar='/static/sim.png'
+            avatar='/static/pulse.png'
             type='Agents'
             readTime='6'
             image='/static/hero.png'
@@ -91,7 +91,7 @@ function Blogs() {
             description="Learn how to create a fully functional AI agent using SimStudio.ai's unified API and workflows."
             author='Emir Ayaz'
             authorRole='Designer'
-            avatar='/static/sim.png'
+            avatar='/static/pulse.png'
             type='Agents'
             readTime='6'
           />
@@ -110,7 +110,7 @@ function Blogs() {
             date={new Date('25 April 2025')}
             author='Emir Ayaz'
             authorRole='Designer'
-            avatar='/static/sim.png'
+            avatar='/static/pulse.png'
             type='Agents'
             readTime='6'
           />
@@ -121,7 +121,7 @@ function Blogs() {
             date={new Date('25 April 2025')}
             author='Emir Ayaz'
             authorRole='Designer'
-            avatar='/static/sim.png'
+            avatar='/static/pulse.png'
             type='Functions'
             readTime='6'
           />

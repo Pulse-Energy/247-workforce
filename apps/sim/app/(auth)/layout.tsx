@@ -23,7 +23,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className='relative z-10 px-6 pt-9'>
         <div className='mx-auto max-w-7xl'>
           <Link href='/' className='inline-flex'>
-            <Image src='/sim.svg' alt='247 Workforce Logo' width={42} height={42} />
+            <Image src='/pulse.svg' alt='247 Workforce Logo' width={42} height={42} />
           </Link>
         </div>
       </div>

@@ -103,7 +103,7 @@ export const InvitationEmail = ({
             <Row>
               <Column style={{ textAlign: 'center' }}>
                 <Img
-                  src={`${baseUrl}/static/sim.png`}
+                  src={`${baseUrl}/static/pulse.png`}
                   width='114'
                   alt={whitelabelConfig.appName}
                   style={{

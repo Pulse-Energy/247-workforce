@@ -136,7 +136,7 @@ export const metadata: Metadata = {
         sizes: '512x512',
         type: 'image/png',
       },
-      { url: '/sim.png', sizes: 'any', type: 'image/png' },
+      { url: '/pulse.png', sizes: 'any', type: 'image/png' },
     ],
     apple: '/favicon/apple-touch-icon.png',
     shortcut: '/favicon/favicon.ico',
