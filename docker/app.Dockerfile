@@ -10,9 +10,6 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install turbo globally
-RUN bun install -g turbo
-
 COPY package.json bun.lock ./
 RUN mkdir -p apps
 COPY apps/sim/package.json ./apps/sim/package.json
@@ -39,7 +36,8 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     VERCEL_TELEMETRY_DISABLED=1 \
     DOCKER_BUILD=1
 
-WORKDIR /app
+# Build only the sim app, not the entire monorepo
+WORKDIR /app/apps/sim
 RUN bun run build
 
 # ========================================
