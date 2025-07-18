@@ -182,6 +182,6 @@ const sentryConfig = {
   },
 }
 
-export default env.NODE_ENV === 'development'
+export default (env.NODE_ENV === 'development' || isTruthy(env.DOCKER_BUILD))
   ? nextConfig
   : withSentryConfig(nextConfig, sentryConfig)
