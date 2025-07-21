@@ -1,0 +1,86 @@
+steps:
+  # ========================================
+  # Step 1: Build the main application Docker image
+  # ========================================
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'docker/app.Dockerfile'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/sim-app:stg-$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/sim-app:stg-latest'
+      - '.'
+
+  # ========================================
+  # Step 2: Push Docker image to Container Registry
+  # ========================================
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/sim-app:stg-$COMMIT_SHA']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/sim-app:stg-latest']
+
+  # ========================================
+  # Step 3: Deploy to Cloud Run - Main Application
+  # ========================================
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'sim-app-stg'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/sim-app:stg-$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '3000'
+      - '--memory'
+      - '2Gi'
+      - '--cpu'
+      - '2'
+      - '--max-instances'
+      - '10'
+      - '--min-instances'
+      - '1'
+      - '--set-env-vars'
+      - 'NODE_ENV=production,DOCKER_BUILD=1'
+      - '--update-env-vars'
+      - 'DATABASE_URL=${_DATABASE_URL},BETTER_AUTH_SECRET=${_BETTER_AUTH_SECRET},BETTER_AUTH_URL=${_BETTER_AUTH_URL},NEXT_PUBLIC_APP_URL=${_NEXT_PUBLIC_APP_URL},ENCRYPTION_KEY=${_ENCRYPTION_KEY}'
+
+# ========================================
+# Substitutions (environment variables)
+# Set these values in Cloud Build trigger configuration
+# ========================================
+substitutions:
+  _DATABASE_URL: 'your-database-url-here'
+  _BETTER_AUTH_SECRET: 'your-better-auth-secret-here'
+  _BETTER_AUTH_URL: 'https://pulse-247-workforce-${_COMMIT_SHA}-uc.a.run.app'
+  _NEXT_PUBLIC_APP_URL: 'https://pulse-247-workforce-${_COMMIT_SHA}-uc.a.run.app'
+  _ENCRYPTION_KEY: 'your-encryption-key-here'
+
+# ========================================
+# Options
+# ========================================
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+  diskSizeGb: '100'
+  env:
+    - 'DOCKER_BUILDKIT=1'
+
+# ========================================
+# Timeout
+# ========================================
+timeout: '1800s'
+
+# ========================================
+# Images to be pushed to Container Registry
+# ========================================
+images:
+  - 'gcr.io/$PROJECT_ID/sim-app:stg-$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/sim-app:stg-latest' 
