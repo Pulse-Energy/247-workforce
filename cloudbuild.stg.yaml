@@ -30,7 +30,7 @@ steps:
   args:
     - 'run'
     - 'deploy'
-    - 'stg-pulse-247-workforce'  # Your Cloud Run service name
+    - 'pulse-247-workforce'  # Your Cloud Run service name
     - '--image'
     - 'asia-south1-docker.pkg.dev/pulse-energy-stg/pulse-247-workforce/pulse-247-workforce:$SHORT_SHA'
     - '--region'
@@ -45,7 +45,7 @@ steps:
     - 'run'
     - 'services'
     - 'update-traffic'
-    - 'stg-pulse-247-workforce'
+    - 'pulse-247-workforce'
     - '--to-latest'
     - '--region'
     - 'asia-south1'
