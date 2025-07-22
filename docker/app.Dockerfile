@@ -25,6 +25,15 @@ RUN bun install --omit dev --ignore-scripts
 FROM base AS builder
 WORKDIR /app
 
+# Declare build arguments
+ARG DATABASE_URL
+ARG BETTER_AUTH_URL
+ARG BETTER_AUTH_SECRET
+ARG ENCRYPTION_KEY
+ARG NEXT_PUBLIC_APP_URL
+ARG GITHUB_TOKEN
+ARG DOCKER_BUILD
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
@@ -50,6 +59,24 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+
+# Declare build arguments again for the runner stage
+ARG DATABASE_URL
+ARG BETTER_AUTH_URL
+ARG BETTER_AUTH_SECRET
+ARG ENCRYPTION_KEY
+ARG NEXT_PUBLIC_APP_URL
+ARG GITHUB_TOKEN
+ARG DOCKER_BUILD
+
+# Set environment variables for runtime
+ENV DATABASE_URL=$DATABASE_URL \
+    BETTER_AUTH_URL=$BETTER_AUTH_URL \
+    BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET \
+    ENCRYPTION_KEY=$ENCRYPTION_KEY \
+    NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
+    GITHUB_TOKEN=$GITHUB_TOKEN \
+    DOCKER_BUILD=$DOCKER_BUILD
 
 COPY --from=builder /app/apps/sim/public ./apps/sim/public
 COPY --from=builder /app/apps/sim/.next/standalone ./
