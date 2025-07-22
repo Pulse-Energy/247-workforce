@@ -10,6 +10,9 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
+# Install turbo globally
+RUN bun install -g turbo
+
 COPY package.json bun.lock ./
 RUN mkdir -p apps
 COPY apps/sim/package.json ./apps/sim/package.json
@@ -21,6 +24,15 @@ RUN bun install --omit dev --ignore-scripts
 # ========================================
 FROM base AS builder
 WORKDIR /app
+
+# Declare build arguments
+ARG DATABASE_URL
+ARG BETTER_AUTH_URL
+ARG BETTER_AUTH_SECRET
+ARG ENCRYPTION_KEY
+ARG NEXT_PUBLIC_APP_URL
+ARG GITHUB_TOKEN
+ARG DOCKER_BUILD
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -36,8 +48,7 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     VERCEL_TELEMETRY_DISABLED=1 \
     DOCKER_BUILD=1
 
-# Build only the sim app, not the entire monorepo
-WORKDIR /app/apps/sim
+WORKDIR /app
 RUN bun run build
 
 # ========================================
@@ -48,6 +59,24 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+
+# Declare build arguments again for the runner stage
+ARG DATABASE_URL
+ARG BETTER_AUTH_URL
+ARG BETTER_AUTH_SECRET
+ARG ENCRYPTION_KEY
+ARG NEXT_PUBLIC_APP_URL
+ARG GITHUB_TOKEN
+ARG DOCKER_BUILD
+
+# Set environment variables for runtime
+ENV DATABASE_URL=$DATABASE_URL \
+    BETTER_AUTH_URL=$BETTER_AUTH_URL \
+    BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET \
+    ENCRYPTION_KEY=$ENCRYPTION_KEY \
+    NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
+    GITHUB_TOKEN=$GITHUB_TOKEN \
+    DOCKER_BUILD=$DOCKER_BUILD
 
 COPY --from=builder /app/apps/sim/public ./apps/sim/public
 COPY --from=builder /app/apps/sim/.next/standalone ./
