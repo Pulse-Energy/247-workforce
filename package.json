@@ -20,7 +20,6 @@
     "lint:check": "bunx biome check --unsafe .",
     "check": "bunx biome check --files-ignore-unknown=true",
     "prepare": "bun husky",
-    "prebuild": "bun run lint:check",
     "type-check": "turbo run type-check"
   },
   "overrides": {

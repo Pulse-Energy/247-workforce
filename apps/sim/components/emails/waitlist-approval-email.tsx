@@ -11,29 +11,28 @@ import {
   Section,
   Text,
 } from '@react-email/components'
-import { format } from 'date-fns'
 import { env } from '@/lib/env'
 import { baseStyles } from './base-styles'
-import EmailFooter from './footer'
+import { EmailFooter } from './footer'
 
-interface ResetPasswordEmailProps {
-  username?: string
-  resetLink?: string
-  updatedDate?: Date
+interface WaitlistApprovalEmailProps {
+  email: string
+  signupUrl: string
+  unsubscribeToken?: string
 }
 
 const baseUrl = env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
 
-export const ResetPasswordEmail = ({
-  username = '',
-  resetLink = '',
-  updatedDate = new Date(),
-}: ResetPasswordEmailProps) => {
+export const WaitlistApprovalEmail = ({
+  email,
+  signupUrl,
+  unsubscribeToken,
+}: WaitlistApprovalEmailProps) => {
   return (
     <Html>
       <Head />
       <Body style={baseStyles.main}>
-        <Preview>Reset your Sim Studio password</Preview>
+        <Preview>You've Been Approved to Join Sim Studio!</Preview>
         <Container style={baseStyles.container}>
           <Section style={{ padding: '30px 0', textAlign: 'center' }}>
             <Row>
@@ -59,41 +58,34 @@ export const ResetPasswordEmail = ({
           </Section>
 
           <Section style={baseStyles.content}>
-            <Text style={baseStyles.paragraph}>Hello {username},</Text>
+            <Text style={baseStyles.paragraph}>Great news!</Text>
             <Text style={baseStyles.paragraph}>
-              You recently requested to reset your password for your Sim Studio account. Use the
-              button below to reset it. This password reset is only valid for the next 24 hours.
+              You've been approved to join Sim Studio! We're excited to have you as part of our
+              community of developers building, testing, and optimizing AI workflows.
             </Text>
-            <Link href={resetLink} style={{ textDecoration: 'none' }}>
-              <Text style={baseStyles.button}>Reset Your Password</Text>
+            <Text style={baseStyles.paragraph}>
+              Your email ({email}) has been approved. Click the button below to create your account
+              and start using Sim Studio today:
+            </Text>
+            <Link href={signupUrl} style={{ textDecoration: 'none' }}>
+              <Text style={baseStyles.button}>Create Your Account</Text>
             </Link>
             <Text style={baseStyles.paragraph}>
-              If you did not request a password reset, please ignore this email or contact support
-              if you have concerns.
+              This approval link will expire in 7 days. If you have any questions or need
+              assistance, feel free to reach out to our support team.
             </Text>
             <Text style={baseStyles.paragraph}>
               Best regards,
               <br />
               The Sim Studio Team
             </Text>
-            <Text
-              style={{
-                ...baseStyles.footerText,
-                marginTop: '40px',
-                textAlign: 'left',
-                color: '#666666',
-              }}
-            >
-              This email was sent on {format(updatedDate, 'MMMM do, yyyy')} because a password reset
-              was requested for your account.
-            </Text>
           </Section>
         </Container>
 
-        <EmailFooter baseUrl={baseUrl} />
+        <EmailFooter baseUrl={baseUrl} unsubscribe={{ unsubscribeToken, email }} />
       </Body>
     </Html>
   )
 }
 
-export default ResetPasswordEmail
+export default WaitlistApprovalEmail

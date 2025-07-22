@@ -1,43 +1,43 @@
 <p align="center">
-  <img src="apps/sim/public/static/sim.png" alt="Sim Studio Logo" width="500"/>
+  <img src="apps/sim/public/static/pulse.png" alt="247 Workforce Logo" width="500"/>
 </p>
 
 <p align="center">
   <a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache-2.0"></a>
   <a href="https://discord.gg/Hr4UWYEcTT"><img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://x.com/simstudioai"><img src="https://img.shields.io/twitter/follow/simstudioai?style=social" alt="Twitter"></a>
-  <a href="https://github.com/simstudioai/sim/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs welcome"></a>
-  <a href="https://docs.simstudio.ai"><img src="https://img.shields.io/badge/Docs-visit%20documentation-blue.svg" alt="Documentation"></a>
+  <a href="https://x.com/247workforce"><img src="https://img.shields.io/twitter/follow/247workforce?style=social" alt="Twitter"></a>
+  <a href="https://github.com/247workforce/workforce/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs welcome"></a>
+  <a href="https://docs.247workforce.com"><img src="https://img.shields.io/badge/Docs-visit%20documentation-blue.svg" alt="Documentation"></a>
 </p>
 
 <p align="center">
-  <strong>Sim Studio</strong> is a lightweight, user-friendly platform for building AI agent workflows.
+  <strong>247 Workforce</strong> is a lightweight, user-friendly platform for building AI agent workflows.
 </p>
 
 <p align="center">
-  <img src="apps/sim/public/static/demo.gif" alt="Sim Studio Demo" width="800"/>
+  <img src="apps/sim/public/static/demo.gif" alt="247 Workforce Demo" width="800"/>
 </p>
 
 ## Getting Started
 
-1. Use our [cloud-hosted version](https://simstudio.ai)
+1. Use our [cloud-hosted version](https://247workforce.com)
 2. Self-host using one of the methods below
 
 ## Self-Hosting Options
 
 ### Option 1: NPM Package (Simplest)
 
-The easiest way to run Sim Studio locally is using our [NPM package](https://www.npmjs.com/package/simstudio?activeTab=readme):
+The easiest way to run 247 Workforce locally is using our [NPM package](https://www.npmjs.com/package/247-workforce-cli?activeTab=readme):
 
 ```bash
-npx simstudio
+npx 247-workforce-cli
 ```
 
 After running these commands, open [http://localhost:3000/](http://localhost:3000/) in your browser.
 
 #### Options
 
-- `-p, --port <port>`: Specify the port to run Sim Studio on (default: 3000)
+- `-p, --port <port>`: Specify the port to run 247 Workforce on (default: 3000)
 - `--no-pull`: Skip pulling the latest Docker images
 
 #### Requirements
@@ -48,20 +48,26 @@ After running these commands, open [http://localhost:3000/](http://localhost:300
 
 ```bash
 # Clone the repository
-git clone https://github.com/simstudioai/sim.git
+git clone https://github.com/247workforce/workforce.git
 
 # Navigate to the project directory
-cd sim
+cd workforce
 
-# Start Sim Studio
+# Start 247 Workforce
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-Access the application at [http://localhost:3000/](http://localhost:3000/)
+## Features
 
-#### Using Local Models
+- **Visual Workflow Builder**: Drag-and-drop interface for creating AI agent workflows
+- **AI Agent Automation**: Build intelligent agents that can automate complex tasks
+- **Real-time Collaboration**: Work together with your team in real-time
+- **Extensive Tool Library**: Access to hundreds of pre-built tools and integrations
+- **Custom Blocks**: Create your own custom blocks and tools
+- **Deployment**: Deploy your workflows with a single click
+- **Analytics**: Monitor and analyze your workflow performance
 
-To use local models with Sim Studio:
+## Documentation
 
 1. Pull models using our helper script:
 
@@ -180,10 +186,15 @@ bun run dev:sockets
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](.github/CONTRIBUTING.md) for details.
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
 
-<p align="center">Made with ❤️ by the Sim Studio Team</p>
+## Support
+
+- **Documentation**: [docs.247workforce.com](https://docs.247workforce.com)
+- **Discord**: [Join our community](https://discord.gg/Hr4UWYEcTT)
+- **Twitter**: [@247workforce](https://x.com/247workforce)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/247workforce/workforce/issues)
