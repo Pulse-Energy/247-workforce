@@ -52,8 +52,8 @@ steps:
 
 options:
   logging: CLOUD_LOGGING_ONLY
-serviceAccount: 508073074780@cloudbuild.gserviceaccount.com
+serviceAccount: 637267550633-compute@developer.gserviceaccount.com
 availableSecrets:
   secretManager:
-  - versionName: projects/508073074780/secrets/GITHUB_TOKEN_CLOUD_BUILD/versions/latest
+  - versionName: projects/637267550633/secrets/GITHUB_TOKEN_CLOUD_BUILD/versions/latest
     env: 'GITHUB_TOKEN' 
