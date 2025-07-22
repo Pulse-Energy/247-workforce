@@ -52,7 +52,7 @@ steps:
 
 options:
   logging: CLOUD_LOGGING_ONLY
-serviceAccount: 637267550633-compute@developer.gserviceaccount.com
+serviceAccount: 637267550633@cloudbuild.gserviceaccount.com
 availableSecrets:
   secretManager:
   - versionName: projects/637267550633/secrets/GITHUB_TOKEN_CLOUD_BUILD/versions/latest
