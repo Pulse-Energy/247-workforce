@@ -162,39 +162,7 @@ export async function GET() {
           continue
         }
 
-        const usageCheck = await checkServerSideUsageLimits(workflowRecord.userId)
-        if (usageCheck.isExceeded) {
-          logger.warn(
-            `[${requestId}] User ${workflowRecord.userId} has exceeded usage limits. Skipping scheduled execution.`,
-            {
-              currentUsage: usageCheck.currentUsage,
-              limit: usageCheck.limit,
-              workflowId: schedule.workflowId,
-            }
-          )
-
-          // Error logging handled by enhanced logging session
-
-          const retryDelay = 24 * 60 * 60 * 1000 // 24 hour delay for exceeded limits
-          const nextRetryAt = new Date(now.getTime() + retryDelay)
-
-          try {
-            await db
-              .update(workflowSchedule)
-              .set({
-                updatedAt: now,
-                nextRunAt: nextRetryAt,
-              })
-              .where(eq(workflowSchedule.id, schedule.id))
-
-            logger.debug(`[${requestId}] Updated next retry time due to usage limits`)
-          } catch (updateError) {
-            logger.error(`[${requestId}] Error updating schedule for usage limits:`, updateError)
-          }
-
-          runningExecutions.delete(schedule.workflowId)
-          continue
-        }
+        // Remove usage limit restrictions - all users can execute scheduled workflows
 
         // Execute scheduled workflow immediately (no queuing)
         logger.info(`[${requestId}] Executing scheduled workflow ${schedule.workflowId}`)

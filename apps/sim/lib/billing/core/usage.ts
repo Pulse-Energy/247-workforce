@@ -68,90 +68,33 @@ export async function getUserUsageData(userId: string): Promise<UsageData> {
  * Get usage limit information for a user
  */
 export async function getUserUsageLimitInfo(userId: string): Promise<UsageLimitInfo> {
-  try {
-    const subscription = await getHighestPrioritySubscription(userId)
+  // Remove payment restrictions - all users can edit limits and have high limits
+  const userStatsRecord = await db
+    .select()
+    .from(userStats)
+    .where(eq(userStats.userId, userId))
+    .limit(1)
 
-    // For team plans, check if user is owner/admin to determine if they can edit their own limit
-    let canEdit = canEditUsageLimit(subscription)
-
-    if (subscription?.plan === 'team') {
-      // For team plans, the subscription referenceId should be the organization ID
-      // Check user's role in that organization
-      const orgMemberRecord = await db
-        .select({ role: member.role })
-        .from(member)
-        .where(and(eq(member.userId, userId), eq(member.organizationId, subscription.referenceId)))
-        .limit(1)
-
-      if (orgMemberRecord.length > 0) {
-        const userRole = orgMemberRecord[0].role
-        // Team owners and admins can edit their own usage limits
-        // Regular team members cannot edit their own limits
-        canEdit = canEdit && ['owner', 'admin'].includes(userRole)
-      } else {
-        // User is not a member of the organization, should not be able to edit
-        canEdit = false
-      }
-    }
-
-    // Use plan-based minimums instead of role-based minimums
-    let minimumLimit: number
-    if (!subscription || subscription.status !== 'active') {
-      // Free plan users
-      minimumLimit = 5
-    } else if (subscription.plan === 'pro') {
-      // Pro plan users: $20 minimum
-      minimumLimit = 20
-    } else if (subscription.plan === 'team') {
-      // Team plan users: $40 minimum (per-seat allocation, regardless of role)
-      minimumLimit = 40
-    } else if (subscription.plan === 'enterprise') {
-      // Enterprise plan users: per-seat allocation from their plan
-      const metadata = subscription.metadata || {}
-      if (metadata.perSeatAllowance) {
-        minimumLimit = Number.parseFloat(metadata.perSeatAllowance)
-      } else if (metadata.totalAllowance) {
-        // For total allowance, use per-seat calculation
-        const seats = subscription.seats || 1
-        minimumLimit = Number.parseFloat(metadata.totalAllowance) / seats
-      } else {
-        minimumLimit = 200 // Default enterprise per-seat limit
-      }
-    } else {
-      // Fallback to plan-based calculation
-      minimumLimit = calculateDefaultUsageLimit(subscription)
-    }
-
-    const userStatsRecord = await db
-      .select()
-      .from(userStats)
-      .where(eq(userStats.userId, userId))
-      .limit(1)
-
-    if (userStatsRecord.length === 0) {
-      await initializeUserUsageLimit(userId)
-      return {
-        currentLimit: 5,
-        canEdit: false,
-        minimumLimit: 5,
-        plan: 'free',
-        setBy: null,
-        updatedAt: null,
-      }
-    }
-
-    const stats = userStatsRecord[0]
+  if (userStatsRecord.length === 0) {
+    await initializeUserUsageLimit(userId)
     return {
-      currentLimit: Number.parseFloat(stats.currentUsageLimit),
-      canEdit,
-      minimumLimit,
-      plan: subscription?.plan || 'free',
-      setBy: stats.usageLimitSetBy,
-      updatedAt: stats.usageLimitUpdatedAt,
+      currentLimit: 1000000,
+      canEdit: true,
+      minimumLimit: 1,
+      plan: 'pro',
+      setBy: null,
+      updatedAt: null,
     }
-  } catch (error) {
-    logger.error('Failed to get usage limit info', { userId, error })
-    throw error
+  }
+
+  const stats = userStatsRecord[0]
+  return {
+    currentLimit: Number.parseFloat(stats.currentUsageLimit),
+    canEdit: true, // All users can edit limits
+    minimumLimit: 1, // Very low minimum
+    plan: 'pro',
+    setBy: stats.usageLimitSetBy,
+    updatedAt: stats.usageLimitUpdatedAt,
   }
 }
 
@@ -195,106 +138,25 @@ export async function updateUserUsageLimit(
   newLimit: number,
   setBy?: string // For team admin tracking
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const subscription = await getHighestPrioritySubscription(userId)
-
-    // Check if user can edit limits
-    let canEdit = canEditUsageLimit(subscription)
-
-    if (subscription?.plan === 'team') {
-      // For team plans, the subscription referenceId should be the organization ID
-      // Check user's role in that organization
-      const orgMemberRecord = await db
-        .select({ role: member.role })
-        .from(member)
-        .where(and(eq(member.userId, userId), eq(member.organizationId, subscription.referenceId)))
-        .limit(1)
-
-      if (orgMemberRecord.length > 0) {
-        const userRole = orgMemberRecord[0].role
-        // Team owners and admins can edit their own usage limits
-        // Regular team members cannot edit their own limits
-        canEdit = canEdit && ['owner', 'admin'].includes(userRole)
-      } else {
-        // User is not a member of the organization, should not be able to edit
-        canEdit = false
-      }
+  // Remove payment restrictions - all users can edit limits
+  if (newLimit < 1) {
+    return {
+      success: false,
+      error: 'Usage limit cannot be below $1',
     }
-
-    if (!canEdit) {
-      if (subscription?.plan === 'team') {
-        return { success: false, error: 'Only team owners and admins can edit usage limits' }
-      }
-      return { success: false, error: 'Free plan users cannot edit usage limits' }
-    }
-
-    // Use plan-based minimums instead of role-based minimums
-    let minimumLimit: number
-
-    if (!subscription || subscription.status !== 'active') {
-      // Free plan users (shouldn't reach here due to canEditUsageLimit check above)
-      minimumLimit = 5
-    } else if (subscription.plan === 'pro') {
-      // Pro plan users: $20 minimum
-      minimumLimit = 20
-    } else if (subscription.plan === 'team') {
-      // Team plan users: $40 minimum (per-seat allocation, regardless of role)
-      minimumLimit = 40
-    } else if (subscription.plan === 'enterprise') {
-      // Enterprise plan users: per-seat allocation from their plan
-      const metadata = subscription.metadata || {}
-      if (metadata.perSeatAllowance) {
-        minimumLimit = Number.parseFloat(metadata.perSeatAllowance)
-      } else if (metadata.totalAllowance) {
-        // For total allowance, use per-seat calculation
-        const seats = subscription.seats || 1
-        minimumLimit = Number.parseFloat(metadata.totalAllowance) / seats
-      } else {
-        minimumLimit = 200 // Default enterprise per-seat limit
-      }
-    } else {
-      // Fallback to plan-based calculation
-      minimumLimit = calculateDefaultUsageLimit(subscription)
-    }
-
-    logger.info('Applying plan-based validation', {
-      userId,
-      newLimit,
-      minimumLimit,
-      plan: subscription?.plan,
-    })
-
-    // Validate new limit is not below minimum
-    if (newLimit < minimumLimit) {
-      return {
-        success: false,
-        error: `Usage limit cannot be below plan minimum of $${minimumLimit}`,
-      }
-    }
-
-    // Update the usage limit
-    await db
-      .update(userStats)
-      .set({
-        currentUsageLimit: newLimit.toString(),
-        usageLimitSetBy: setBy || userId,
-        usageLimitUpdatedAt: new Date(),
-      })
-      .where(eq(userStats.userId, userId))
-
-    logger.info('Updated user usage limit', {
-      userId,
-      newLimit,
-      setBy: setBy || userId,
-      planMinimum: minimumLimit,
-      plan: subscription?.plan,
-    })
-
-    return { success: true }
-  } catch (error) {
-    logger.error('Failed to update usage limit', { userId, newLimit, error })
-    return { success: false, error: 'Failed to update usage limit' }
   }
+
+  // Update the usage limit
+  await db
+    .update(userStats)
+    .set({
+      currentUsageLimit: newLimit.toString(),
+      usageLimitSetBy: setBy || userId,
+      usageLimitUpdatedAt: new Date(),
+    })
+    .where(eq(userStats.userId, userId))
+
+  return { success: true }
 }
 
 /**

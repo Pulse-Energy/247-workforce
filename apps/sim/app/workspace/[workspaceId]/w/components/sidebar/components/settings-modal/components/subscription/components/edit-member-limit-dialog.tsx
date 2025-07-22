@@ -51,16 +51,8 @@ export function EditMemberLimitDialog({
 
   // Get plan minimum based on plan type
   const getPlanMinimum = (plan: string): number => {
-    switch (plan) {
-      case 'pro':
-        return 20
-      case 'team':
-        return 40
-      case 'enterprise':
-        return 100
-      default:
-        return 5
-    }
+    // Remove payment restrictions - very low minimum for all plans
+    return 1
   }
 
   const planMinimum = getPlanMinimum(planType)

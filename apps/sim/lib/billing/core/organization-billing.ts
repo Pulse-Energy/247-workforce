@@ -166,90 +166,20 @@ export async function updateMemberUsageLimit(
   newLimit: number,
   adminUserId: string
 ): Promise<void> {
-  try {
-    // Verify admin has permission to modify limits
-    const adminMemberRecord = await db
-      .select()
-      .from(member)
-      .where(and(eq(member.organizationId, organizationId), eq(member.userId, adminUserId)))
-      .limit(1)
-
-    if (adminMemberRecord.length === 0 || !['owner', 'admin'].includes(adminMemberRecord[0].role)) {
-      throw new Error('Insufficient permissions to modify usage limits')
-    }
-
-    // Verify member exists in organization
-    const targetMemberRecord = await db
-      .select()
-      .from(member)
-      .where(and(eq(member.organizationId, organizationId), eq(member.userId, memberId)))
-      .limit(1)
-
-    if (targetMemberRecord.length === 0) {
-      throw new Error('Member not found in organization')
-    }
-
-    // Get organization subscription to validate limit
-    const subscription = await getHighestPrioritySubscription(organizationId)
-    if (!subscription) {
-      throw new Error('No active subscription found')
-    }
-
-    // Validate minimum limit based on plan
-    const planLimits = {
-      free: 5,
-      pro: 20,
-      team: 40,
-      enterprise: 100, // Default, can be overridden by metadata
-    }
-
-    let minimumLimit = planLimits[subscription.plan as keyof typeof planLimits] || 5
-
-    // For enterprise, check metadata for custom limits
-    if (subscription.plan === 'enterprise' && subscription.metadata) {
-      try {
-        const metadata =
-          typeof subscription.metadata === 'string'
-            ? JSON.parse(subscription.metadata)
-            : subscription.metadata
-        if (metadata.perSeatAllowance) {
-          minimumLimit = metadata.perSeatAllowance
-        }
-      } catch (e) {
-        logger.warn('Failed to parse subscription metadata', { error: e })
-      }
-    }
-
-    if (newLimit < minimumLimit) {
-      throw new Error(`Usage limit cannot be below $${minimumLimit} for ${subscription.plan} plan`)
-    }
-
-    // Update the member's usage limit
-    await db
-      .update(userStats)
-      .set({
-        currentUsageLimit: newLimit.toString(),
-        usageLimitSetBy: adminUserId,
-        usageLimitUpdatedAt: new Date(),
-      })
-      .where(eq(userStats.userId, memberId))
-
-    logger.info('Updated member usage limit', {
-      organizationId,
-      memberId,
-      newLimit,
-      adminUserId,
-    })
-  } catch (error) {
-    logger.error('Failed to update member usage limit', {
-      organizationId,
-      memberId,
-      newLimit,
-      adminUserId,
-      error,
-    })
-    throw error
+  // Remove payment restrictions - all users can edit limits
+  if (newLimit < 1) {
+    throw new Error('Usage limit cannot be below $1')
   }
+
+  // Update the usage limit
+  await db
+    .update(userStats)
+    .set({
+      currentUsageLimit: newLimit.toString(),
+      usageLimitSetBy: adminUserId,
+      usageLimitUpdatedAt: new Date(),
+    })
+    .where(eq(userStats.userId, memberId))
 }
 
 /**

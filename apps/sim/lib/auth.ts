@@ -1081,27 +1081,27 @@ export const auth = betterAuth({
                   name: 'free',
                   priceId: env.STRIPE_FREE_PRICE_ID || '',
                   limits: {
-                    cost: env.FREE_TIER_COST_LIMIT ?? 5,
-                    sharingEnabled: 0,
-                    multiplayerEnabled: 0,
-                    workspaceCollaborationEnabled: 0,
+                    cost: 1000000, // Very high limit
+                    sharingEnabled: 1, // Enable sharing for all
+                    multiplayerEnabled: 1, // Enable multiplayer for all
+                    workspaceCollaborationEnabled: 1, // Enable collaboration for all
                   },
                 },
                 {
                   name: 'pro',
                   priceId: env.STRIPE_PRO_PRICE_ID || '',
                   limits: {
-                    cost: env.PRO_TIER_COST_LIMIT ?? 20,
+                    cost: 1000000, // Very high limit
                     sharingEnabled: 1,
-                    multiplayerEnabled: 0,
-                    workspaceCollaborationEnabled: 0,
+                    multiplayerEnabled: 1,
+                    workspaceCollaborationEnabled: 1,
                   },
                 },
                 {
                   name: 'team',
                   priceId: env.STRIPE_TEAM_PRICE_ID || '',
                   limits: {
-                    cost: env.TEAM_TIER_COST_LIMIT ?? 40, // $40 per seat
+                    cost: 1000000, // Very high limit
                     sharingEnabled: 1,
                     multiplayerEnabled: 1,
                     workspaceCollaborationEnabled: 1,

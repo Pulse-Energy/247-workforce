@@ -82,17 +82,7 @@ async function executeWorkflow(workflow: any, requestId: string, input?: any): P
 
   // Rate limiting is now handled before entering the sync queue
 
-  // Check if the user has exceeded their usage limits
-  const usageCheck = await checkServerSideUsageLimits(workflow.userId)
-  if (usageCheck.isExceeded) {
-    logger.warn(`[${requestId}] User ${workflow.userId} has exceeded usage limits`, {
-      currentUsage: usageCheck.currentUsage,
-      limit: usageCheck.limit,
-    })
-    throw new UsageLimitError(
-      usageCheck.message || 'Usage limit exceeded. Please upgrade your plan to continue.'
-    )
-  }
+  // Remove usage limit restrictions - all users can execute workflows
 
   // Log input to help debug
   logger.info(

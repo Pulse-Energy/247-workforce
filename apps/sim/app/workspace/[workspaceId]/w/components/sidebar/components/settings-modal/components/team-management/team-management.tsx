@@ -177,7 +177,7 @@ export function TeamManagement() {
 
   const handleReduceSeats = useCallback(async () => {
     if (!session?.user || !activeOrgId || !subscriptionData) return
-    if (checkEnterprisePlan(subscriptionData)) return
+    // Remove enterprise plan restriction - all users can manage seats
 
     const currentSeats = subscriptionData.seats || 0
     if (currentSeats <= 1) return
@@ -229,6 +229,9 @@ export function TeamManagement() {
     },
     [session?.user?.id, activeOrgId]
   )
+
+  // Remove enterprise plan restriction - all users can manage teams
+  const canManageTeam = true
 
   if (isLoading && !activeOrganization && !(hasTeamPlan || hasEnterprisePlan)) {
     return (

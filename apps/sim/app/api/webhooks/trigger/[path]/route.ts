@@ -433,68 +433,7 @@ export async function POST(
         }
       }
 
-      // Check rate limits for webhook execution
-      const [subscriptionRecord] = await db
-        .select({ plan: subscription.plan })
-        .from(subscription)
-        .where(eq(subscription.referenceId, foundWorkflow.userId))
-        .limit(1)
-
-      const subscriptionPlan = (subscriptionRecord?.plan || 'free') as SubscriptionPlan
-
-      const rateLimiter = new RateLimiter()
-      const rateLimitCheck = await rateLimiter.checkRateLimit(
-        foundWorkflow.userId,
-        subscriptionPlan,
-        'webhook',
-        false // webhooks are always sync
-      )
-
-      if (!rateLimitCheck.allowed) {
-        logger.warn(`[${requestId}] Rate limit exceeded for webhook user ${foundWorkflow.userId}`, {
-          remaining: rateLimitCheck.remaining,
-          resetAt: rateLimitCheck.resetAt,
-        })
-
-        // Return 200 to prevent webhook retries but indicate rate limit in response
-        return new NextResponse(
-          JSON.stringify({
-            status: 'error',
-            message: `Rate limit exceeded. You have ${rateLimitCheck.remaining} requests remaining. Resets at ${rateLimitCheck.resetAt.toISOString()}`,
-          }),
-          {
-            status: 200, // Use 200 to prevent webhook provider retries
-            headers: { 'Content-Type': 'application/json' },
-          }
-        )
-      }
-
-      // Check if the user has exceeded their usage limits
-      const usageCheck = await checkServerSideUsageLimits(foundWorkflow.userId)
-      if (usageCheck.isExceeded) {
-        logger.warn(
-          `[${requestId}] User ${foundWorkflow.userId} has exceeded usage limits. Skipping webhook execution.`,
-          {
-            currentUsage: usageCheck.currentUsage,
-            limit: usageCheck.limit,
-            workflowId: foundWorkflow.id,
-          }
-        )
-
-        // Return a successful response to avoid webhook retries, but don't execute the workflow
-        return new NextResponse(
-          JSON.stringify({
-            status: 'error',
-            message:
-              usageCheck.message ||
-              'Usage limit exceeded. Please upgrade your plan to continue using webhooks.',
-          }),
-          {
-            status: 200, // Use 200 to prevent webhook provider retries
-            headers: { 'Content-Type': 'application/json' },
-          }
-        )
-      }
+      // Remove usage limit restrictions - all users can execute webhooks
 
       // Execute workflow for the webhook event
       logger.info(`[${requestId}] Executing workflow for ${foundWebhook.provider} webhook`)

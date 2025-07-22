@@ -212,36 +212,14 @@ export function Subscription({ onOpenChange }: SubscriptionProps) {
             ) : (
               <UsageLimitEditor
                 currentLimit={usageLimitData?.currentLimit ?? usage.limit}
-                canEdit={
-                  subscription.isPro ||
-                  subscription.isTeam ||
-                  subscription.isEnterprise ||
-                  (subscription.isTeam && isTeamAdmin)
-                }
-                minimumLimit={usageLimitData?.minimumLimit ?? 5}
+                canEdit={true} // All users can edit limits
+                minimumLimit={1} // Very low minimum
               />
             )}
           </div>
-          {subscription.isFree && (
-            <p className='mt-1 text-muted-foreground text-xs'>
-              Upgrade to Pro ($20 minimum) or Team ($40 minimum) to customize your usage limit.
-            </p>
-          )}
-          {subscription.isPro && (
-            <p className='mt-1 text-muted-foreground text-xs'>
-              Pro plan minimum: $20. You can set your individual limit higher.
-            </p>
-          )}
-          {subscription.isTeam && !isTeamAdmin && (
-            <p className='mt-1 text-muted-foreground text-xs'>
-              Contact your team owner to adjust your limit. Team plan minimum: $40.
-            </p>
-          )}
-          {subscription.isTeam && isTeamAdmin && (
-            <p className='mt-1 text-muted-foreground text-xs'>
-              Team plan minimum: $40 per member. Manage team member limits in the Team tab.
-            </p>
-          )}
+          <p className='mt-1 text-muted-foreground text-xs'>
+            You can customize your usage limit as needed.
+          </p>
         </div>
 
         {/* Team Management */}

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import {
   resetOrganizationBillingPeriod,
   resetUserBillingPeriod,
@@ -9,6 +9,7 @@ import { requireStripeClient } from '@/lib/billing/stripe-client'
 import { createLogger } from '@/lib/logs/console-logger'
 import { db } from '@/db'
 import { member, organization, subscription, user, userStats } from '@/db/schema'
+import { BillingSummary } from '../types'
 
 const logger = createLogger('Billing')
 
@@ -37,29 +38,16 @@ export function getPlanPricing(
   basePrice: number // What they pay upfront via Stripe subscription
   minimum: number // Minimum they're guaranteed to pay
 } {
+  // Remove payment restrictions - all plans are free
   switch (plan) {
     case 'free':
-      return { basePrice: 0, minimum: 0 } // Free plan has no charges
+      return { basePrice: 0, minimum: 0 }
     case 'pro':
-      return { basePrice: 20, minimum: 20 } // $20/month subscription
+      return { basePrice: 0, minimum: 0 }
     case 'team':
-      return { basePrice: 40, minimum: 40 } // $40/seat/month subscription
+      return { basePrice: 0, minimum: 0 }
     case 'enterprise':
-      // Get per-seat pricing from metadata
-      if (subscription?.metadata) {
-        const metadata =
-          typeof subscription.metadata === 'string'
-            ? JSON.parse(subscription.metadata)
-            : subscription.metadata
-
-        // Validate perSeatAllowance is a positive number
-        const perSeatAllowance = metadata.perSeatAllowance
-        const perSeatPrice =
-          typeof perSeatAllowance === 'number' && perSeatAllowance > 0 ? perSeatAllowance : 100 // Fall back to default for invalid values
-
-        return { basePrice: perSeatPrice, minimum: perSeatPrice }
-      }
-      return { basePrice: 100, minimum: 100 } // Default enterprise pricing
+      return { basePrice: 0, minimum: 0 }
     default:
       return { basePrice: 0, minimum: 0 }
   }
@@ -284,35 +272,12 @@ export async function calculateUserOverage(userId: string): Promise<{
   overageAmount: number
   plan: string
 } | null> {
-  try {
-    // Get user's subscription and usage data
-    const [subscription, usageData, userRecord] = await Promise.all([
-      getHighestPrioritySubscription(userId),
-      getUserUsageData(userId),
-      db.select().from(user).where(eq(user.id, userId)).limit(1),
-    ])
-
-    if (userRecord.length === 0) {
-      logger.warn('User not found for overage calculation', { userId })
-      return null
-    }
-
-    const plan = subscription?.plan || 'free'
-    const { basePrice } = getPlanPricing(plan, subscription)
-    const actualUsage = usageData.currentUsage
-
-    // Calculate overage: any usage beyond what they already paid for
-    const overageAmount = Math.max(0, actualUsage - basePrice)
-
-    return {
-      basePrice,
-      actualUsage,
-      overageAmount,
-      plan,
-    }
-  } catch (error) {
-    logger.error('Failed to calculate user overage', { userId, error })
-    return null
+  // Remove payment restrictions - no overage charges
+  return {
+    basePrice: 0,
+    actualUsage: 0,
+    overageAmount: 0,
+    plan: 'free',
   }
 }
 
@@ -320,107 +285,8 @@ export async function calculateUserOverage(userId: string): Promise<{
  * Process overage billing for an individual user
  */
 export async function processUserOverageBilling(userId: string): Promise<BillingResult> {
-  try {
-    const overageInfo = await calculateUserOverage(userId)
-
-    if (!overageInfo) {
-      return { success: false, error: 'Failed to calculate overage information' }
-    }
-
-    // Skip billing for free plan users
-    if (overageInfo.plan === 'free') {
-      logger.info('Skipping overage billing for free plan user', { userId })
-      return { success: true, chargedAmount: 0 }
-    }
-
-    // Skip if no overage
-    if (overageInfo.overageAmount <= 0) {
-      logger.info('No overage to bill for user', {
-        userId,
-        basePrice: overageInfo.basePrice,
-        actualUsage: overageInfo.actualUsage,
-      })
-
-      // Still reset billing period even if no overage
-      try {
-        await resetUserBillingPeriod(userId)
-      } catch (resetError) {
-        logger.error('Failed to reset billing period', { userId, error: resetError })
-      }
-
-      return { success: true, chargedAmount: 0 }
-    }
-
-    // Get Stripe customer ID
-    const stripeCustomerId = await getStripeCustomerId(userId)
-    if (!stripeCustomerId) {
-      logger.error('No Stripe customer ID found for user', { userId })
-      return { success: false, error: 'No Stripe customer ID found' }
-    }
-
-    // Get user email to ensure Stripe customer has it set
-    const userRecord = await db
-      .select({ email: user.email })
-      .from(user)
-      .where(eq(user.id, userId))
-      .limit(1)
-
-    if (userRecord[0]?.email) {
-      // Update Stripe customer with email if needed
-      const stripeClient = requireStripeClient()
-      try {
-        await stripeClient.customers.update(stripeCustomerId, {
-          email: userRecord[0].email,
-        })
-        logger.info('Updated Stripe customer with email', {
-          userId,
-          stripeCustomerId,
-          email: userRecord[0].email,
-        })
-      } catch (updateError) {
-        logger.warn('Failed to update Stripe customer email', {
-          userId,
-          stripeCustomerId,
-          error: updateError,
-        })
-      }
-    }
-
-    const description = `Usage overage for ${overageInfo.plan} plan - $${overageInfo.overageAmount.toFixed(2)} above $${overageInfo.basePrice} base`
-    const metadata = {
-      userId,
-      plan: overageInfo.plan,
-      basePrice: overageInfo.basePrice.toString(),
-      actualUsage: overageInfo.actualUsage.toString(),
-      overageAmount: overageInfo.overageAmount.toString(),
-      billingPeriod: new Date().toISOString().slice(0, 7), // YYYY-MM format
-    }
-
-    const result = await createOverageBillingInvoice(
-      stripeCustomerId,
-      overageInfo.overageAmount,
-      description,
-      metadata
-    )
-
-    // If billing was successful, reset the user's billing period
-    if (result.success) {
-      try {
-        await resetUserBillingPeriod(userId)
-        logger.info('Successfully reset billing period after charging user overage', { userId })
-      } catch (resetError) {
-        logger.error('Failed to reset billing period after successful overage charge', {
-          userId,
-          error: resetError,
-        })
-      }
-    }
-
-    return result
-  } catch (error) {
-    logger.error('Failed to process user overage billing', { userId, error })
-    return { success: false, error: 'Failed to process overage billing' }
-  }
+  // Remove payment restrictions - no billing
+  return { success: true, chargedAmount: 0 }
 }
 
 /**
@@ -429,169 +295,8 @@ export async function processUserOverageBilling(userId: string): Promise<Billing
 export async function processOrganizationOverageBilling(
   organizationId: string
 ): Promise<BillingResult> {
-  try {
-    // Get organization subscription
-    const subscription = await getHighestPrioritySubscription(organizationId)
-
-    if (!subscription || !['team', 'enterprise'].includes(subscription.plan)) {
-      logger.warn('No team/enterprise subscription found for organization', { organizationId })
-      return { success: false, error: 'No valid subscription found' }
-    }
-
-    // Get organization's Stripe customer ID
-    const stripeCustomerId = await getStripeCustomerId(organizationId)
-    if (!stripeCustomerId) {
-      logger.error('No Stripe customer ID found for organization', { organizationId })
-      return { success: false, error: 'No Stripe customer ID found' }
-    }
-
-    // Get organization owner's email for billing
-    const orgOwner = await db
-      .select({
-        userId: member.userId,
-        userEmail: user.email,
-      })
-      .from(member)
-      .innerJoin(user, eq(member.userId, user.id))
-      .where(and(eq(member.organizationId, organizationId), eq(member.role, 'owner')))
-      .limit(1)
-
-    if (orgOwner[0]?.userEmail) {
-      // Update Stripe customer with organization owner's email
-      const stripeClient = requireStripeClient()
-      try {
-        await stripeClient.customers.update(stripeCustomerId, {
-          email: orgOwner[0].userEmail,
-        })
-        logger.info('Updated Stripe customer with organization owner email', {
-          organizationId,
-          stripeCustomerId,
-          email: orgOwner[0].userEmail,
-        })
-      } catch (updateError) {
-        logger.warn('Failed to update Stripe customer email for organization', {
-          organizationId,
-          stripeCustomerId,
-          error: updateError,
-        })
-      }
-    }
-
-    // Get all organization members
-    const members = await db
-      .select({
-        userId: member.userId,
-        userName: user.name,
-        userEmail: user.email,
-      })
-      .from(member)
-      .innerJoin(user, eq(member.userId, user.id))
-      .where(eq(member.organizationId, organizationId))
-
-    if (members.length === 0) {
-      logger.info('No members found for organization overage billing', { organizationId })
-      return { success: true, chargedAmount: 0 }
-    }
-
-    // Calculate total team usage across all members
-    const { basePrice: basePricePerSeat } = getPlanPricing(subscription.plan, subscription)
-    const licensedSeats = subscription.seats || 1
-    const baseSubscriptionAmount = licensedSeats * basePricePerSeat // What Stripe already charged
-
-    let totalTeamUsage = 0
-    const memberUsageDetails = []
-
-    for (const memberInfo of members) {
-      const usageData = await getUserUsageData(memberInfo.userId)
-      totalTeamUsage += usageData.currentUsage
-
-      memberUsageDetails.push({
-        userId: memberInfo.userId,
-        name: memberInfo.userName,
-        email: memberInfo.userEmail,
-        usage: usageData.currentUsage,
-      })
-    }
-
-    // Calculate team-level overage: total usage beyond what was already paid to Stripe
-    const totalOverage = Math.max(0, totalTeamUsage - baseSubscriptionAmount)
-
-    // Skip if no overage across the organization
-    if (totalOverage <= 0) {
-      logger.info('No overage to bill for organization', {
-        organizationId,
-        licensedSeats,
-        memberCount: members.length,
-        totalTeamUsage,
-        baseSubscriptionAmount,
-      })
-
-      // Still reset billing period for all members
-      try {
-        await resetOrganizationBillingPeriod(organizationId)
-      } catch (resetError) {
-        logger.error('Failed to reset organization billing period', {
-          organizationId,
-          error: resetError,
-        })
-      }
-
-      return { success: true, chargedAmount: 0 }
-    }
-
-    // Create consolidated overage invoice for the organization
-    const description = `Team usage overage for ${subscription.plan} plan - ${licensedSeats} licensed seats, $${totalTeamUsage.toFixed(2)} total usage, $${totalOverage.toFixed(2)} overage`
-    const metadata = {
-      organizationId,
-      plan: subscription.plan,
-      licensedSeats: licensedSeats.toString(),
-      memberCount: members.length.toString(),
-      basePricePerSeat: basePricePerSeat.toString(),
-      baseSubscriptionAmount: baseSubscriptionAmount.toString(),
-      totalTeamUsage: totalTeamUsage.toString(),
-      totalOverage: totalOverage.toString(),
-      billingPeriod: new Date().toISOString().slice(0, 7), // YYYY-MM format
-      memberDetails: JSON.stringify(memberUsageDetails),
-    }
-
-    const result = await createOverageBillingInvoice(
-      stripeCustomerId,
-      totalOverage,
-      description,
-      metadata
-    )
-
-    // If billing was successful, reset billing period for all organization members
-    if (result.success) {
-      try {
-        await resetOrganizationBillingPeriod(organizationId)
-        logger.info('Successfully reset billing period for organization after overage billing', {
-          organizationId,
-          memberCount: members.length,
-        })
-      } catch (resetError) {
-        logger.error(
-          'Failed to reset organization billing period after successful overage charge',
-          {
-            organizationId,
-            error: resetError,
-          }
-        )
-      }
-    }
-
-    logger.info('Processed organization overage billing', {
-      organizationId,
-      memberCount: members.length,
-      totalOverage,
-      result,
-    })
-
-    return result
-  } catch (error) {
-    logger.error('Failed to process organization overage billing', { organizationId, error })
-    return { success: false, error: 'Failed to process organization overage billing' }
-  }
+  // Remove payment restrictions - no billing
+  return { success: true, chargedAmount: 0 }
 }
 
 /**
@@ -714,195 +419,21 @@ export async function getUsersAndOrganizationsForOverageBilling(): Promise<{
 export async function getSimplifiedBillingSummary(
   userId: string,
   organizationId?: string
-): Promise<{
-  type: 'individual' | 'organization'
-  plan: string
-  basePrice: number
-  currentUsage: number
-  overageAmount: number
-  totalProjected: number
-  usageLimit: number
-  percentUsed: number
-  isWarning: boolean
-  isExceeded: boolean
-  daysRemaining: number
-  // Subscription details
-  isPaid: boolean
-  isPro: boolean
-  isTeam: boolean
-  isEnterprise: boolean
-  status: string | null
-  seats: number | null
-  metadata: any
-  stripeSubscriptionId: string | null
-  periodEnd: Date | string | null
-  // Usage details
-  usage: {
-    current: number
-    limit: number
-    percentUsed: number
-    isWarning: boolean
-    isExceeded: boolean
-    billingPeriodStart: Date | null
-    billingPeriodEnd: Date | null
-    lastPeriodCost: number
-    daysRemaining: number
-  }
-  organizationData?: {
-    seatCount: number
-    totalBasePrice: number
-    totalCurrentUsage: number
-    totalOverage: number
-  }
-}> {
-  try {
-    // Get subscription and usage data upfront
-    const [subscription, usageData] = await Promise.all([
-      getHighestPrioritySubscription(organizationId || userId),
-      getUserUsageData(userId),
-    ])
-
-    // Determine subscription type flags
-    const plan = subscription?.plan || 'free'
-    const isPaid = plan !== 'free'
-    const isPro = plan === 'pro'
-    const isTeam = plan === 'team'
-    const isEnterprise = plan === 'enterprise'
-
-    if (organizationId) {
-      // Organization billing summary
-      if (!subscription) {
-        return getDefaultBillingSummary('organization')
-      }
-
-      // Get all organization members
-      const members = await db
-        .select({ userId: member.userId })
-        .from(member)
-        .where(eq(member.organizationId, organizationId))
-
-      const { basePrice: basePricePerSeat } = getPlanPricing(subscription.plan, subscription)
-      const licensedSeats = subscription.seats || 1
-      const totalBasePrice = basePricePerSeat * licensedSeats // Based on licensed seats, not member count
-
-      let totalCurrentUsage = 0
-
-      // Calculate total team usage across all members
-      for (const memberInfo of members) {
-        const memberUsageData = await getUserUsageData(memberInfo.userId)
-        totalCurrentUsage += memberUsageData.currentUsage
-      }
-
-      // Calculate team-level overage: total usage beyond what was already paid to Stripe
-      const totalOverage = Math.max(0, totalCurrentUsage - totalBasePrice)
-
-      // Get user's personal limits for warnings
-      const percentUsed =
-        usageData.limit > 0 ? Math.round((usageData.currentUsage / usageData.limit) * 100) : 0
-
-      // Calculate days remaining in billing period
-      const daysRemaining = usageData.billingPeriodEnd
-        ? Math.max(
-            0,
-            Math.ceil((usageData.billingPeriodEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-          )
-        : 0
-
-      return {
-        type: 'organization',
-        plan: subscription.plan,
-        basePrice: totalBasePrice,
-        currentUsage: totalCurrentUsage,
-        overageAmount: totalOverage,
-        totalProjected: totalBasePrice + totalOverage,
-        usageLimit: usageData.limit,
-        percentUsed,
-        isWarning: percentUsed >= 80 && percentUsed < 100,
-        isExceeded: usageData.currentUsage >= usageData.limit,
-        daysRemaining,
-        // Subscription details
-        isPaid,
-        isPro,
-        isTeam,
-        isEnterprise,
-        status: subscription.status || null,
-        seats: subscription.seats || null,
-        metadata: subscription.metadata || null,
-        stripeSubscriptionId: subscription.stripeSubscriptionId || null,
-        periodEnd: subscription.periodEnd || null,
-        // Usage details
-        usage: {
-          current: usageData.currentUsage,
-          limit: usageData.limit,
-          percentUsed,
-          isWarning: percentUsed >= 80 && percentUsed < 100,
-          isExceeded: usageData.currentUsage >= usageData.limit,
-          billingPeriodStart: usageData.billingPeriodStart,
-          billingPeriodEnd: usageData.billingPeriodEnd,
-          lastPeriodCost: usageData.lastPeriodCost,
-          daysRemaining,
-        },
-        organizationData: {
-          seatCount: licensedSeats,
-          totalBasePrice,
-          totalCurrentUsage,
-          totalOverage,
-        },
-      }
-    }
-
-    // Individual billing summary
-    const { basePrice } = getPlanPricing(plan, subscription)
-    const overageAmount = Math.max(0, usageData.currentUsage - basePrice)
-    const percentUsed =
-      usageData.limit > 0 ? Math.round((usageData.currentUsage / usageData.limit) * 100) : 0
-
-    // Calculate days remaining in billing period
-    const daysRemaining = usageData.billingPeriodEnd
-      ? Math.max(
-          0,
-          Math.ceil((usageData.billingPeriodEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-        )
-      : 0
-
-    return {
-      type: 'individual',
-      plan,
-      basePrice,
-      currentUsage: usageData.currentUsage,
-      overageAmount,
-      totalProjected: basePrice + overageAmount,
-      usageLimit: usageData.limit,
-      percentUsed,
-      isWarning: percentUsed >= 80 && percentUsed < 100,
-      isExceeded: usageData.currentUsage >= usageData.limit,
-      daysRemaining,
-      // Subscription details
-      isPaid,
-      isPro,
-      isTeam,
-      isEnterprise,
-      status: subscription?.status || null,
-      seats: subscription?.seats || null,
-      metadata: subscription?.metadata || null,
-      stripeSubscriptionId: subscription?.stripeSubscriptionId || null,
-      periodEnd: subscription?.periodEnd || null,
-      // Usage details
-      usage: {
-        current: usageData.currentUsage,
-        limit: usageData.limit,
-        percentUsed,
-        isWarning: percentUsed >= 80 && percentUsed < 100,
-        isExceeded: usageData.currentUsage >= usageData.limit,
-        billingPeriodStart: usageData.billingPeriodStart,
-        billingPeriodEnd: usageData.billingPeriodEnd,
-        lastPeriodCost: usageData.lastPeriodCost,
-        daysRemaining,
-      },
-    }
-  } catch (error) {
-    logger.error('Failed to get simplified billing summary', { userId, organizationId, error })
-    return getDefaultBillingSummary(organizationId ? 'organization' : 'individual')
+): Promise<BillingSummary> {
+  // Remove payment restrictions - all users get unlimited access
+  return {
+    userId,
+    email: '',
+    name: '',
+    currentPeriodCost: 0,
+    currentUsageLimit: 1000000,
+    currentUsagePercentage: 0,
+    billingPeriodStart: new Date(),
+    billingPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    plan: 'pro',
+    subscriptionStatus: 'active',
+    seats: 1,
+    billingStatus: 'ok',
   }
 }
 

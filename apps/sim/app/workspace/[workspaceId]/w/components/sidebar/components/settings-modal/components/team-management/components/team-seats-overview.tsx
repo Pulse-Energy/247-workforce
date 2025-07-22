@@ -91,6 +91,9 @@ export function TeamSeatsOverview({
     )
   }
 
+  // Remove enterprise plan restriction - all users can manage seats
+  const canManageSeats = true
+
   return (
     <Card>
       <CardHeader className='pb-3'>
@@ -134,12 +137,7 @@ export function TeamSeatsOverview({
             Individual usage limits may vary. See Subscription tab for team totals.
           </div>
 
-          {checkEnterprisePlan(subscriptionData) ? (
-            <div className='rounded-lg bg-purple-50 p-4 text-center'>
-              <p className='font-medium text-purple-700 text-sm'>Enterprise Plan</p>
-              <p className='mt-1 text-purple-600 text-xs'>Contact support to modify seats</p>
-            </div>
-          ) : (
+          {canManageSeats ? (
             <div className='flex gap-2'>
               <Button
                 variant='outline'
@@ -153,6 +151,11 @@ export function TeamSeatsOverview({
               <Button size='sm' onClick={onAddSeatDialog} disabled={isLoading} className='flex-1'>
                 Add Seat
               </Button>
+            </div>
+          ) : (
+            <div className='rounded-lg bg-purple-50 p-4 text-center'>
+              <p className='font-medium text-purple-700 text-sm'>Enterprise Plan</p>
+              <p className='mt-1 text-purple-600 text-xs'>Contact support to modify seats</p>
             </div>
           )}
         </div>

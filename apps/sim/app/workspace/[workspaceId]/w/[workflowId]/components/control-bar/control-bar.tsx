@@ -115,15 +115,8 @@ export function ControlBar({ hasValidationErrors = false }: ControlBarProps) {
   // Change detection state
   const [changeDetected, setChangeDetected] = useState(false)
 
-  // Usage limit state
-  const [usageExceeded, setUsageExceeded] = useState(false)
-  const [usageData, setUsageData] = useState<{
-    percentUsed: number
-    isWarning: boolean
-    isExceeded: boolean
-    currentUsage: number
-    limit: number
-  } | null>(null)
+  // Remove usage restrictions - no need to track usage exceeded state
+  const [usageData, setUsageData] = useState<any>(null)
 
   // Helper function to open console panel
   const openConsolePanel = useCallback(() => {
@@ -284,7 +277,6 @@ export function ControlBar({ hasValidationErrors = false }: ControlBarProps) {
     if (session?.user?.id && !isRegistryLoading) {
       checkUserUsage(session.user.id).then((usage) => {
         if (usage) {
-          setUsageExceeded(usage.isExceeded)
           setUsageData(usage)
         }
       })
@@ -295,39 +287,13 @@ export function ControlBar({ hasValidationErrors = false }: ControlBarProps) {
    * Check user usage limits and cache results
    */
   async function checkUserUsage(userId: string, forceRefresh = false): Promise<any | null> {
-    const now = Date.now()
-    const cacheAge = now - usageDataCache.timestamp
-
-    // Return cached data if still valid and not forcing refresh
-    if (!forceRefresh && usageDataCache.data && cacheAge < usageDataCache.expirationMs) {
-      logger.info('Using cached usage data', {
-        cacheAge: `${Math.round(cacheAge / 1000)}s`,
-      })
-      return usageDataCache.data
-    }
-
-    try {
-      // Use subscription store to get usage data
-      const { getUsage, refresh } = useSubscriptionStore.getState()
-
-      // Force refresh if requested
-      if (forceRefresh) {
-        await refresh()
-      }
-
-      const usage = getUsage()
-
-      // Update cache
-      usageDataCache = {
-        data: usage,
-        timestamp: now,
-        expirationMs: usageDataCache.expirationMs,
-      }
-
-      return usage
-    } catch (error) {
-      logger.error('Error checking usage limits:', { error })
-      return null
+    // Remove usage restrictions - always return unlimited usage
+    return {
+      currentUsage: 0,
+      limit: 1000000,
+      isExceeded: false,
+      isWarning: false,
+      percentUsed: 0,
     }
   }
 
@@ -578,18 +544,13 @@ export function ControlBar({ hasValidationErrors = false }: ControlBarProps) {
       if (!isDebugModeEnabled) {
         toggleDebugMode()
       }
-      if (usageExceeded) {
-        openSubscriptionSettings()
-      } else {
-        openConsolePanel()
-        handleRunWorkflow(undefined, true) // Start in debug mode
-      }
+      openConsolePanel()
+      handleRunWorkflow(undefined, true) // Start in debug mode
     }
   }, [
     userPermissions.canRead,
     isDebugging,
     isDebugModeEnabled,
-    usageExceeded,
     blocks,
     handleCancelDebug,
     toggleDebugMode,
@@ -778,29 +739,12 @@ export function ControlBar({ hasValidationErrors = false }: ControlBarProps) {
         return 'Read permission required to run workflows'
       }
 
-      if (usageExceeded) {
-        return (
-          <div className='text-center'>
-            <p className='font-medium text-destructive'>Usage Limit Exceeded</p>
-            <p className='text-xs'>
-              You've used {usageData?.currentUsage?.toFixed(2) || 0}$ of{' '}
-              {usageData?.limit?.toFixed(2) || 0}$ Upgrade your plan to continue.
-            </p>
-          </div>
-        )
-      }
-
       return 'Run'
     }
 
     const handleRunClick = () => {
       openConsolePanel()
-
-      if (usageExceeded) {
-        openSubscriptionSettings()
-      } else {
-        handleRunWorkflow()
-      }
+      handleRunWorkflow()
     }
 
     return (
