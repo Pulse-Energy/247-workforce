@@ -80,7 +80,7 @@ export function TeamUsageOverview({ hasAdminAccess }: TeamUsageOverviewProps) {
     setSelectedMember(null)
   }
 
-  const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`
+  const formatCurrency = (amount: number) => `$${(amount ?? 0).toFixed(2)}`
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never'
     return new Date(dateString).toLocaleDateString()

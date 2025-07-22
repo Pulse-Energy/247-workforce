@@ -107,7 +107,7 @@ export function BillingSummary({
     return null
   }
 
-  const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`
+  const formatCurrency = (amount: number) => `$${(amount ?? 0).toFixed(2)}`
 
   if (isLoading || error || !billingSummary) {
     return null

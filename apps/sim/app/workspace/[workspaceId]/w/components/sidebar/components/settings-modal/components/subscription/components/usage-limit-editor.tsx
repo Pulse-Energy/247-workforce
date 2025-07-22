@@ -18,13 +18,13 @@ export function UsageLimitEditor({
   minimumLimit,
   onLimitUpdated,
 }: UsageLimitEditorProps) {
-  const [inputValue, setInputValue] = useState(currentLimit.toString())
+  const [inputValue, setInputValue] = useState((currentLimit ?? 0).toString())
   const [isSaving, setIsSaving] = useState(false)
 
   const { updateUsageLimit } = useSubscriptionStore()
 
   useEffect(() => {
-    setInputValue(currentLimit.toString())
+    setInputValue((currentLimit ?? 0).toString())
   }, [currentLimit])
 
   const handleSubmit = async () => {

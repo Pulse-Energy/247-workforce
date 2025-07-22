@@ -168,11 +168,11 @@ export function Subscription({ onOpenChange }: SubscriptionProps) {
 
           <div className='mb-3 flex items-center justify-between'>
             <span className='font-semibold text-2xl'>
-              ${usage.current.toFixed(2)} / ${usage.limit}
+              ${(usage.current ?? 0).toFixed(2)} / ${usage.limit ?? 5}
             </span>
             <div className='text-right'>
               <span className='block text-muted-foreground text-sm'>
-                {usage.percentUsed}% used this period
+                {usage.percentUsed ?? 0}% used this period
               </span>
             </div>
           </div>
@@ -184,7 +184,7 @@ export function Subscription({ onOpenChange }: SubscriptionProps) {
             <AlertCircle className='h-4 w-4' />
             <AlertTitle>Usage Limit Exceeded</AlertTitle>
             <AlertDescription>
-              You've exceeded your usage limit of ${usage.limit}. Please upgrade your plan or
+              You've exceeded your usage limit of ${usage.limit ?? 5}. Please upgrade your plan or
               increase your limit.
             </AlertDescription>
           </Alert>
@@ -195,7 +195,7 @@ export function Subscription({ onOpenChange }: SubscriptionProps) {
             <AlertCircle className='h-4 w-4' />
             <AlertTitle>Approaching Usage Limit</AlertTitle>
             <AlertDescription>
-              You've used {usage.percentUsed}% of your ${usage.limit} limit. Consider upgrading or
+              You've used {usage.percentUsed ?? 0}% of your ${usage.limit ?? 5} limit. Consider upgrading or
               increasing your limit.
             </AlertDescription>
           </Alert>
@@ -211,7 +211,7 @@ export function Subscription({ onOpenChange }: SubscriptionProps) {
               <Skeleton className='h-8 w-16' />
             ) : (
               <UsageLimitEditor
-                currentLimit={usageLimitData?.currentLimit ?? usage.limit}
+                currentLimit={usageLimitData?.currentLimit ?? usage.limit ?? 5}
                 canEdit={true} // All users can edit limits
                 minimumLimit={1} // Very low minimum
               />
@@ -278,7 +278,7 @@ export function Subscription({ onOpenChange }: SubscriptionProps) {
                     <div className='flex items-center justify-between'>
                       <span className='text-muted-foreground text-sm'>Current Usage</span>
                       <span className='font-semibold'>
-                        ${organizationBillingData.totalCurrentUsage?.toFixed(2) || 0}
+                        ${(organizationBillingData.totalCurrentUsage ?? 0).toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -306,7 +306,7 @@ export function Subscription({ onOpenChange }: SubscriptionProps) {
                   <div className='space-y-2'>
                     <div className='flex items-center justify-between'>
                       <span className='text-muted-foreground text-sm'>Your monthly allowance</span>
-                      <span className='font-semibold'>${usage.limit}</span>
+                      <span className='font-semibold'>${usage.limit ?? 5}</span>
                     </div>
                     <p className='text-muted-foreground text-xs'>
                       Contact your team owner to adjust your limit

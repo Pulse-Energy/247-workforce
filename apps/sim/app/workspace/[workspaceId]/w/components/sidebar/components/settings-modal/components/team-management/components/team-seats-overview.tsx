@@ -130,7 +130,7 @@ export function TeamSeatsOverview({
           <div className='flex items-center justify-between border-t pt-2 text-sm'>
             <span>Seat Cost:</span>
             <span className='font-semibold'>
-              ${((subscriptionData.seats || 0) * 40).toFixed(2)}
+              ${((subscriptionData.seats ?? 0) * 40).toFixed(2)}
             </span>
           </div>
           <div className='mt-2 text-muted-foreground text-xs'>

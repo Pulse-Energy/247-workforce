@@ -44,7 +44,7 @@ export function EditMemberLimitDialog({
   // Update limit value when member changes
   useEffect(() => {
     if (member) {
-      setLimitValue(member.usageLimit.toString())
+      setLimitValue((member.usageLimit ?? 0).toString())
       setError(null)
     }
   }, [member])
@@ -69,14 +69,14 @@ export function EditMemberLimitDialog({
 
     if (newLimit < planMinimum) {
       setError(
-        `The limit cannot be below the ${planType} plan minimum of $${planMinimum.toFixed(2)}`
+        `The limit cannot be below the ${planType} plan minimum of $${(planMinimum ?? 0).toFixed(2)}`
       )
       return
     }
 
     if (newLimit < member.currentUsage) {
       setError(
-        `The new limit ($${newLimit.toFixed(2)}) cannot be lower than the member's current usage ($${member.currentUsage?.toFixed(2) || 0})`
+        `The new limit ($${(newLimit ?? 0).toFixed(2)}) cannot be lower than the member's current usage ($${(member.currentUsage ?? 0).toFixed(2)})`
       )
       return
     }
@@ -90,7 +90,7 @@ export function EditMemberLimitDialog({
     }
   }
 
-  const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`
+  const formatCurrency = (amount: number) => `$${(amount ?? 0).toFixed(2)}`
 
   if (!member) return null
 
